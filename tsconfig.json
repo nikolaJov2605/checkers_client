@@ -1,8 +1,9 @@
 {
     "exclude": ["./test/", "./node_modules/", "./dist/"],
     "compilerOptions": {
+        "jsx": "react",
         "esModuleInterop": true,
-        "module": "ES2015",
+        "module": "esnext",
         "moduleResolution": "node",
         "target": "ES6"
     }

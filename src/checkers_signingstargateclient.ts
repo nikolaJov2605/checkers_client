@@ -21,8 +21,6 @@ import {
 } from "./types/checkers/messages"
 import { Pos } from "./types/checkers/player"
 
-
-
 export const checkersDefaultRegistryTypes: ReadonlyArray<[string, GeneratedType]> = [
     ...defaultRegistryTypes,
     ...checkersTypes,
@@ -31,7 +29,6 @@ export const checkersDefaultRegistryTypes: ReadonlyArray<[string, GeneratedType]
 function createDefaultRegistry(): Registry {
     return new Registry(checkersDefaultRegistryTypes)
 }
-
 
 export class CheckersSigningStargateClient extends SigningStargateClient {
     public readonly checkersQueryClient: CheckersExtension | undefined
@@ -118,5 +115,4 @@ export class CheckersSigningStargateClient extends SigningStargateClient {
         }
         return this.signAndBroadcast(creator, [rejectGameMsg], fee, memo)
     }
-
 }
