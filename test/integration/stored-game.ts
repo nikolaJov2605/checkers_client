@@ -4,6 +4,7 @@ import Long from "long"
 import _ from "../../environment"
 import { CheckersStargateClient } from "../../src/checkers_stargateclient"
 import { CheckersExtension } from "../../src/modules/checkers/queries"
+import 'mocha'
 
 config()
 
