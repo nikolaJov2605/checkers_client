@@ -12,19 +12,40 @@ import {
     ModalHeader,
     Row
 } from "reactstrap";
+import { CheckersSigningStargateClient } from "../../../checkers_signingstargateclient";
 
 import { IGameInfo } from "../../../sharedTypes";
+import { Window as KeplrWindow } from "@keplr-wallet/types"
+
 import "./NewGame.css";
 import PlayerAiCheckbox from "./PlayerAiCheckbox";
 import PlayerNameInput from "./PlayerNameInput";
+import { OfflineSigner } from "@cosmjs/proto-signing";
+import { checkersChainId, getCheckersChainInfo } from "../../../types/checkers/chain";
+import { GasPrice, SigningStargateClient } from "@cosmjs/stargate";
+import {} from "../../../../src/types/checkers/extensions-gui"
+import { createRoot } from "react-dom/client";
+
+
+declare global {
+    interface Window extends KeplrWindow {}
+}
+
+interface CreatorInfo {
+    creator: string
+    signingClient: CheckersSigningStargateClient
+}
 
 interface INewGameModalProps {
     close: () => void;
     shown: boolean;
+    rpcUrl: string;
 }
 
 interface INewGameModalState {
     showAlert: boolean;
+    creator: string;
+    signingClient: CheckersSigningStargateClient | undefined;
 }
 
 export default class NewGameModal extends Component<
@@ -45,7 +66,9 @@ export default class NewGameModal extends Component<
     public constructor(props: INewGameModalProps) {
         super(props);
         this.state = {
-            showAlert: false
+            showAlert: false,
+            creator: "",
+            signingClient: undefined,
         };
         this.p1NameRef = React.createRef();
         this.p2NameRef = React.createRef();
@@ -53,6 +76,31 @@ export default class NewGameModal extends Component<
         this.p2AIRef = React.createRef();
 
         this.handleSubmit = this.handleSubmit.bind(this);
+    }
+
+    protected async getSigningStargateClient(): Promise<CreatorInfo> {
+        if (this.state.creator && this.state.signingClient)
+            return {
+                creator: this.state.creator,
+                signingClient: this.state.signingClient,
+            }
+        const { keplr } = window
+        if (!keplr) {
+            alert("You need to install Keplr")
+            throw new Error("You need to install Keplr")
+        }
+        await keplr.experimentalSuggestChain(getCheckersChainInfo())
+        const offlineSigner: OfflineSigner = keplr.getOfflineSigner!(checkersChainId)
+        const creator = (await offlineSigner.getAccounts())[0].address
+        const client: CheckersSigningStargateClient = await CheckersSigningStargateClient.connectWithSigner(
+            this.props.rpcUrl,
+            offlineSigner,
+            {
+                gasPrice: GasPrice.fromString("1stake"),
+            },
+        )
+        this.setState({ creator: creator, signingClient: client })
+        return { creator: creator, signingClient: client }
     }
 
     public render() {
@@ -102,17 +150,11 @@ export default class NewGameModal extends Component<
                     </Alert>
                 </ModalBody>
                 <ModalFooter>
-                    <Link
-                        to={{
-                            pathname: "/play/0",
-                            search: "?newGame=true"
-                        }}
-                        style={this.linkStyles}
-                        onClick={this.handleSubmit}>
+                    <div style={this.linkStyles} onClick={this.handleSubmit}>
                         <Button color="success" size="lg">
                             Play Game!
                         </Button>
-                    </Link>
+                    </div>
                     <Button color="danger" size="lg" onClick={this.props.close}>
                         Cancel
                     </Button>
@@ -121,7 +163,7 @@ export default class NewGameModal extends Component<
         );
     }
 
-    private handleSubmit(event: any): void {
+    private async handleSubmit(event: any): Promise<void> {
         if (
             this.p1NameRef.current &&
             this.p2NameRef.current &&
@@ -155,26 +197,12 @@ export default class NewGameModal extends Component<
             }
 
             if (p1Valid && p2Valid) {
-                const info: IGameInfo = {
-                    board: null,
-                    created: new Date(),
-                    isNewGame: true,
-                    last: new Date(),
-                    p1: {
-                        is_ai: this.p1AIRef.current.state.checked,
-                        name: p1Name,
-                        score: 0
-                    },
-                    p2: {
-                        is_ai: this.p2AIRef.current.state.checked,
-                        name: p2Name,
-                        score: 0
-                    },
-                    turn: 1
-                };
-                const saved: IGameInfo[] = Lockr.get("saved_games") || [];
-                Lockr.set("saved_games", [info, ...saved]);
+                const {creator, signingClient } = await this.getSigningStargateClient()
+                const index: string = await signingClient.createGuiGame(creator, p1Name, p2Name)
+                
                 this.props.close();
+
+                window.location.replace(`/play/${index}`)
             } else {
                 event.preventDefault();
             }

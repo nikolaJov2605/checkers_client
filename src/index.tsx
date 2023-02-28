@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./components/App";
 import registerServiceWorker from "./registerServiceWorker";
+import _ from "../environment"
 
 Lockr.prefix = "react_checkers";
 // make sure the browser supports local storage
@@ -17,7 +18,7 @@ const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement)
 root.render(
     <React.StrictMode>
         <BrowserRouter>
-            <App />
+            <App rpcUrl={process.env.RPC_URL!}/>
         </BrowserRouter>
     </React.StrictMode>,
 );
